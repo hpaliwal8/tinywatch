@@ -156,7 +156,7 @@
   },
   "size-limit": [
     {
-      "name": "client core — synchronous critical path (init + track, lazy chunks excluded)",
+      "name": "client core — init+track (named imports tree-shake to ~814B; size-limit retains use/shutdown via shared bindings so reports higher)",
       "path": "dist/index.js",
       "import": "{ init, track, identify }",
       "ignore": [
@@ -171,7 +171,7 @@
       "name": "client full (core + transport + autocapture + sections, all lazy-loaded)",
       "path": "dist/index.js",
       "import": "*",
-      "limit": "2.25 kB",
+      "limit": "2.2 kB",
       "gzip": true
     }
   ],

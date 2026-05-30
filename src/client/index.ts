@@ -1,4 +1,4 @@
-import type { ClientConfig, Plugin, PluginContext, TinywatchEvent } from "../types";
+import type { ClientConfig, Plugin, TinywatchEvent } from "../types";
 import { getAnonymousId, getSessionId } from "./ids";
 import type { Transport } from "./transport";
 
@@ -96,12 +96,8 @@ export function shutdown(): void {
 }
 
 export function use(plugin: Plugin): void {
-  if (!cfg) throw new Error("tinywatch: call init() before use()");
-  const ctx: PluginContext = { track, config: cfg };
-  plugin.setup(ctx);
+  if (!cfg) throw new Error("tinywatch: init() before use()");
+  plugin.setup({ track, config: cfg });
 }
-
-/** Convenience namespace for `tw.use(...)` ergonomics. */
-export const tw = { init, track, identify, use, shutdown };
 
 export type { ClientConfig, Plugin, PluginContext } from "../types";
