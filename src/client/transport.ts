@@ -40,11 +40,16 @@ export function createTransport(
   }
 
   setInterval(() => flush(), flushInterval);
-  addEventListener("beforeunload", () => flush(true));
-  // visibilitychange is more reliable than beforeunload on mobile.
-  addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "hidden") flush(true);
-  });
+  // Guard for non-browser hosts (SSR, tests, workers without these globals):
+  // wiring up listeners is best-effort, so the transport degrades to a plain
+  // interval+manual-flush sink rather than throwing at construction time.
+  if (typeof addEventListener === "function") {
+    addEventListener("beforeunload", () => flush(true));
+    // visibilitychange is more reliable than beforeunload on mobile.
+    addEventListener("visibilitychange", () => {
+      if (typeof document !== "undefined" && document.visibilityState === "hidden") flush(true);
+    });
+  }
 
   return {
     enqueue(event: TinywatchEvent): void {

@@ -1,4 +1,5 @@
 import { newDb } from "pg-mem";
+import { randomUUID } from "node:crypto";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createQueries } from "../src/server";
 import { postgresAdapter } from "../src/server/adapters/postgres";
@@ -9,7 +10,7 @@ import type { DbAdapter, StoredEvent } from "../src/types";
 // ON CONFLICT, BIGINT) is actually exercised without a real PG server.
 
 const evt = (over: Partial<StoredEvent> = {}): StoredEvent => ({
-  id: crypto.randomUUID(),
+  id: randomUUID(),
   name: "$pageview",
   anonymousId: "a1",
   sessionId: "s1",
@@ -115,6 +116,16 @@ describe("postgres adapter contract (pg-mem)", () => {
     expect(await adapter.getVisitors({ from: 0, to: now + 1000 })).toBe(2);
     expect(await adapter.pruneBefore!(now)).toBe(1);
     expect(await adapter.getVisitors({ from: 0, to: now + 1000 })).toBe(1);
+  });
+
+  it("chunks inserts beyond the Postgres parameter ceiling (>5461 events)", async () => {
+    // 6000 events * 12 params = 72000 > 65535, so the adapter must split into
+    // multiple INSERTs. (pg-mem has no param limit, so this guards the chunking
+    // logic itself, not the limit — the real-PG CI job covers the hard ceiling.)
+    const n = 6000;
+    const events = Array.from({ length: n }, (_, i) => evt({ anonymousId: `a${i}` }));
+    await adapter.insertEvents(events);
+    expect(await adapter.getVisitors({ from: 0, to: Date.now() + 1000 })).toBe(n);
   });
 
   it("round-trips JSONB props and optional fields (userId/city)", async () => {

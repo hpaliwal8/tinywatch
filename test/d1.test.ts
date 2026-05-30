@@ -1,4 +1,5 @@
 import Database from "better-sqlite3";
+import { randomUUID } from "node:crypto";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createQueries } from "../src/server";
 import { d1Adapter } from "../src/server/adapters/d1";
@@ -59,7 +60,7 @@ function makeD1(db: Database.Database) {
 }
 
 const evt = (over: Partial<StoredEvent> = {}): StoredEvent => ({
-  id: crypto.randomUUID(),
+  id: randomUUID(),
   name: "$pageview",
   anonymousId: "a1",
   sessionId: "s1",
@@ -109,6 +110,9 @@ describe("d1 adapter contract (better-sqlite3-backed D1 shim)", () => {
   });
 
   it("dedupes duplicate ids within a single batch (parity)", async () => {
+    // The d1 adapter does NOT JS-dedup; this passes because INSERT OR IGNORE
+    // skips the 2nd row on PK conflict (better-sqlite3 .run() doesn't throw).
+    // Don't "fix" the adapter by adding JS dedup — the SQL handles it.
     await adapter.insertEvents([evt({ id: "same", anonymousId: "first" }), evt({ id: "same", anonymousId: "second" })]);
     expect(await createQueries({ adapter }).getVisitors()).toBe(1);
   });

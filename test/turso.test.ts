@@ -1,4 +1,5 @@
 import { createClient, type Client } from "@libsql/client";
+import { randomUUID } from "node:crypto";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createQueries } from "../src/server";
 import { tursoAdapter } from "../src/server/adapters/turso";
@@ -8,7 +9,7 @@ import type { DbAdapter, StoredEvent } from "../src/types";
 // client, proving the DbAdapter interface holds across two real backends.
 
 const evt = (over: Partial<StoredEvent> = {}): StoredEvent => ({
-  id: crypto.randomUUID(),
+  id: randomUUID(),
   name: "$pageview",
   anonymousId: "a1",
   sessionId: "s1",

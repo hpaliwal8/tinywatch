@@ -22,6 +22,11 @@ function num(v: unknown): number {
 }
 
 const COLUMNS = 12; // columns per inserted row, for $-placeholder grouping
+// Postgres caps a single statement at 65535 bind parameters (Int16 wire field).
+// Chunk inserts well under that ceiling so the adapter is self-safe regardless
+// of how many events a caller passes (the HTTP handler caps batches, but
+// insertEvents is a public API others can call directly).
+const MAX_ROWS_PER_INSERT = 5000; // 5000 * 12 = 60000 params, safely < 65535
 
 /** Pass a node-postgres Pool you already own, e.g. `postgresAdapter(new Pool())`. */
 export function postgresAdapter(pool: Pool): DbAdapter {
@@ -59,37 +64,40 @@ export function postgresAdapter(pool: Pool): DbAdapter {
       const seen = new Set<string>();
       const rows = events.filter((e) => (seen.has(e.id) ? false : (seen.add(e.id), true)));
 
-      // One multi-row INSERT: atomic and a single round-trip. Build VALUES groups
-      // ($1,...,$12),($13,...,$24),... and flatten the args in the same order.
-      const groups: string[] = [];
-      const args: unknown[] = [];
-      rows.forEach((e, i) => {
-        const b = i * COLUMNS;
-        groups.push(
-          `($${b + 1}, $${b + 2}, $${b + 3}, $${b + 4}, $${b + 5}, $${b + 6}, $${b + 7}::jsonb, $${b + 8}, $${b + 9}, $${b + 10}, $${b + 11}, $${b + 12})`,
+      // Chunk to stay under Postgres's per-statement parameter ceiling. Each
+      // chunk is one multi-row INSERT: atomic and a single round-trip.
+      for (let start = 0; start < rows.length; start += MAX_ROWS_PER_INSERT) {
+        const chunk = rows.slice(start, start + MAX_ROWS_PER_INSERT);
+        const groups: string[] = [];
+        const args: unknown[] = [];
+        chunk.forEach((e, i) => {
+          const b = i * COLUMNS;
+          groups.push(
+            `($${b + 1}, $${b + 2}, $${b + 3}, $${b + 4}, $${b + 5}, $${b + 6}, $${b + 7}::jsonb, $${b + 8}, $${b + 9}, $${b + 10}, $${b + 11}, $${b + 12})`,
+          );
+          args.push(
+            e.id,
+            e.name,
+            e.anonymousId,
+            e.userId ?? null,
+            e.sessionId,
+            e.path ?? null,
+            e.props ? JSON.stringify(e.props) : null,
+            e.country ?? null,
+            e.city ?? null,
+            e.userAgent ?? null,
+            e.ts,
+            e.receivedAt,
+          );
+        });
+        await pool.query(
+          `INSERT INTO tw_events
+             (id, name, anonymous_id, user_id, session_id, path, props, country, city, user_agent, ts, received_at)
+           VALUES ${groups.join(", ")}
+           ON CONFLICT (id) DO NOTHING`,
+          args,
         );
-        args.push(
-          e.id,
-          e.name,
-          e.anonymousId,
-          e.userId ?? null,
-          e.sessionId,
-          e.path ?? null,
-          e.props ? JSON.stringify(e.props) : null,
-          e.country ?? null,
-          e.city ?? null,
-          e.userAgent ?? null,
-          e.ts,
-          e.receivedAt,
-        );
-      });
-      await pool.query(
-        `INSERT INTO tw_events
-           (id, name, anonymous_id, user_id, session_id, path, props, country, city, user_agent, ts, received_at)
-         VALUES ${groups.join(", ")}
-         ON CONFLICT (id) DO NOTHING`,
-        args,
-      );
+      }
     },
 
     async getVisitors({ from, to }: TimeRange) {
