@@ -1,0 +1,165 @@
+{
+  "name": "tinywatch",
+  "version": "0.1.0",
+  "description": "Tiny, embeddable web analytics: a ~600B client SDK plus a server handler that writes to your own database. A dependency, not a deployment.",
+  "type": "module",
+  "license": "MIT",
+  "author": "YOUR_NAME <you@example.com>",
+  "homepage": "https://github.com/YOU/tinywatch#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/YOU/tinywatch.git"
+  },
+  "bugs": {
+    "url": "https://github.com/YOU/tinywatch/issues"
+  },
+  "keywords": [
+    "analytics",
+    "web-analytics",
+    "self-hosted",
+    "privacy",
+    "cookieless",
+    "tracking",
+    "pageviews",
+    "events",
+    "sdk",
+    "turso",
+    "cloudflare-d1",
+    "postgres",
+    "sqlite",
+    "tree-shakeable",
+    "zero-dependencies"
+  ],
+  "sideEffects": false,
+  "engines": {
+    "node": ">=18"
+  },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "browser": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "tinywatch": "./dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "exports": {
+    ".": {
+      "browser": {
+        "import": {
+          "types": "./dist/index.d.ts",
+          "default": "./dist/index.js"
+        },
+        "require": {
+          "types": "./dist/index.d.cts",
+          "default": "./dist/index.cjs"
+        }
+      },
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./server": {
+      "node": {
+        "import": {
+          "types": "./dist/server.d.ts",
+          "default": "./dist/server.js"
+        },
+        "require": {
+          "types": "./dist/server.d.cts",
+          "default": "./dist/server.cjs"
+        }
+      },
+      "import": {
+        "types": "./dist/server.d.ts",
+        "default": "./dist/server.js"
+      },
+      "require": {
+        "types": "./dist/server.d.cts",
+        "default": "./dist/server.cjs"
+      }
+    },
+    "./types": {
+      "import": {
+        "types": "./dist/types.d.ts",
+        "default": "./dist/types.js"
+      },
+      "require": {
+        "types": "./dist/types.d.cts",
+        "default": "./dist/types.cjs"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "clean": "rm -rf dist",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "size": "size-limit",
+    "attw": "attw --pack .",
+    "prepublishOnly": "npm run clean && npm run build && npm run attw"
+  },
+  "peerDependencies": {
+    "@libsql/client": "*",
+    "better-sqlite3": "*",
+    "pg": "*"
+  },
+  "peerDependenciesMeta": {
+    "@libsql/client": {
+      "optional": true
+    },
+    "better-sqlite3": {
+      "optional": true
+    },
+    "pg": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@arethetypeswrong/cli": "^0.17.0",
+    "@cloudflare/workers-types": "^4.20241218.0",
+    "@libsql/client": "^0.14.0",
+    "@size-limit/preset-small-lib": "^11.1.6",
+    "@types/better-sqlite3": "^7.6.12",
+    "@types/node": "^22.10.0",
+    "@types/pg": "^8.11.10",
+    "better-sqlite3": "^11.7.0",
+    "pg": "^8.13.1",
+    "size-limit": "^11.1.6",
+    "tsup": "^8.3.5",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  },
+  "size-limit": [
+    {
+      "name": "client core — synchronous critical path (init + track, lazy chunks excluded)",
+      "path": "dist/index.js",
+      "import": "{ init, track, identify }",
+      "ignore": ["./transport-*", "./autocapture-*", "./sections-*"],
+      "limit": "900 B",
+      "gzip": true
+    },
+    {
+      "name": "client full (core + transport + autocapture + sections)",
+      "path": "dist/index.js",
+      "import": "*",
+      "limit": "2 kB",
+      "gzip": true
+    }
+  ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  }
+}
