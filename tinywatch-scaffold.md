@@ -165,7 +165,7 @@ export interface ClientConfig {
   noPersist?: boolean;
 }
 
-/** A client plugin registered via tw.use(). */
+/** A client plugin registered via use(). */
 export interface Plugin {
   name: string;
   setup(ctx: PluginContext): void;
@@ -399,8 +399,8 @@ export function use(plugin: Plugin): void {
   plugin.setup(ctx);
 }
 
-/** Convenience namespace for `tw.use(...)` ergonomics. */
-export const tw = { init, track, identify, use };
+// Named exports only (init / track / identify / use / shutdown) — a `tw`
+// namespace object was dropped because it defeats tree-shaking of unused members.
 
 export type { ClientConfig, Plugin, PluginContext } from "../types";
 ```
@@ -1038,4 +1038,4 @@ MIT
 2. **`npm run size`** — get a real number for the core path. If size-limit counts the lazy autocapture chunk against the 600B budget, scope the core entry or adjust the limit to reflect the synchronous critical path.
 3. **Finish the Turso adapter** — it's the highest-value second backend (same SQL as SQLite, just async). Use it to prove the adapter interface holds across two real databases.
 4. **Add a Vitest integration test** that runs `migrate → insertEvents → getVisitors` against an in-memory SQLite DB. That single test guards the whole server contract.
-5. **Decide the plugin packaging** — whether `tw.use()` plugins ship in this package under `tinywatch/plugins/*` subpaths or as separate packages. That choice belongs in the `exports` map, so settle it before 1.0.
+5. **Decide the plugin packaging** — DECIDED: first-party `use()` plugins ship under `tinywatch/plugins/*` subpaths (settled in the `exports` map). Third-party plugins remain possible via the exported `Plugin`/`PluginContext` types.

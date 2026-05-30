@@ -97,7 +97,10 @@ export function shutdown(): void {
 
 export function use(plugin: Plugin): void {
   if (!cfg) throw new Error("tinywatch: init() before use()");
-  plugin.setup({ track, config: cfg });
+  // Hand plugins a copy so they can read config but can't mutate the client's
+  // live cfg (autocapture reads cfg.* lazily per-event, so a mutation would
+  // silently change capture behavior).
+  plugin.setup({ track, config: { ...cfg } });
 }
 
 export type { ClientConfig, Plugin, PluginContext } from "../types";

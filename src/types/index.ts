@@ -44,7 +44,7 @@ export interface ClientConfig {
   noPersist?: boolean;
 }
 
-/** A client plugin registered via tw.use(). */
+/** A client plugin registered via use(). */
 export interface Plugin {
   name: string;
   setup(ctx: PluginContext): void;
@@ -52,7 +52,8 @@ export interface Plugin {
 
 export interface PluginContext {
   track: (name: string, props?: Record<string, unknown>) => void;
-  config: Required<ClientConfig>;
+  /** A read-only copy of the resolved config (mutating it does not affect the client). */
+  config: Readonly<Required<ClientConfig>>;
 }
 
 /** Geo/IP info extracted server-side from platform headers. */

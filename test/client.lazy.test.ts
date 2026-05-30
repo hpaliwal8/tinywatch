@@ -210,3 +210,49 @@ describe("shutdown()", () => {
     expect(sent.map((e) => e.name)).not.toContain("after_shutdown");
   });
 });
+
+describe("use() plugins", () => {
+  it("throws if called before init()", async () => {
+    const { use } = await freshClient();
+    expect(() => use({ name: "p", setup() {} })).toThrow(/init\(\) before use\(\)/);
+  });
+
+  it("runs the plugin and exposes track + config", async () => {
+    const { init, use } = await freshClient();
+    init({ endpoint: "/api/tw", autocapture: false });
+    let seenEndpoint: string | undefined;
+    use({
+      name: "p",
+      setup(ctx) {
+        seenEndpoint = ctx.config.endpoint;
+        ctx.track("from_plugin");
+      },
+    });
+    expect(seenEndpoint).toBe("/api/tw");
+    await vi.waitFor(() => {
+      stubs.fireVisibility("hidden");
+      expect(stubs.beaconCalls.length).toBeGreaterThan(0);
+    });
+    const sent = stubs.beaconCalls.flatMap((c) => (JSON.parse(c.body) as EventBatch).events);
+    expect(sent.map((e) => e.name)).toContain("from_plugin");
+  });
+
+  it("gives plugins a config copy — mutating it does not affect the client", async () => {
+    const { init, use, track } = await freshClient();
+    init({ endpoint: "/api/tw", autocapture: false });
+    use({
+      name: "evil",
+      setup(ctx) {
+        // A plugin tampering with config must not change the live client.
+        (ctx.config as { endpoint: string }).endpoint = "https://evil.test";
+      },
+    });
+    track("after_plugin");
+    await vi.waitFor(() => {
+      stubs.fireVisibility("hidden");
+      expect(stubs.beaconCalls.length).toBeGreaterThan(0);
+    });
+    // All events still flush to the original endpoint, not the mutated one.
+    expect(stubs.beaconCalls.every((c) => c.url === "/api/tw")).toBe(true);
+  });
+});
