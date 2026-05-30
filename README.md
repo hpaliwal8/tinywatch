@@ -57,9 +57,9 @@ or a hosted backend you forward data to.
 | Tool                    | Shape                | Data lives in                       | Dashboard      | Infra to run                          |
 | ----------------------- | -------------------- | ----------------------------------- | -------------- | ------------------------------------- |
 | **tinywatch**           | Library (import)     | Your DB (SQLite/Turso/D1/Postgres)  | Bring your own | None beyond your app                  |
-| Counterscale            | Deployed Worker      | Cloudflare Analytics Engine (90d)   | Included       | Cloudflare account                    |
-| Plausible/Umami/Rybbit  | Deployed service     | Their datastore                     | Included       | Separate server (Rybbit: ClickHouse)  |
-| PostHog                 | Service + SDK        | PostHog cloud / heavy self-host     | Included       | Cloud, or Kafka+Redis+PG+ClickHouse   |
+| Counterscale            | Deployed Worker      | Cloudflare Analytics Engine (90d¹)  | Included       | Cloudflare account                    |
+| Plausible/Umami/Rybbit  | Deployed service     | Their datastore                     | Included       | Separate server (Plausible/Rybbit: ClickHouse) |
+| PostHog                 | Service + SDK        | PostHog cloud (self-host²)          | Included       | Cloud, or Kafka+Redis+PG+ClickHouse   |
 | Tinybird                | Hosted backend       | Tinybird (managed ClickHouse)       | Bring your own | SaaS account                          |
 
 Two axes none of them occupy simultaneously: **library vs deployed service**, and
@@ -67,6 +67,10 @@ Two axes none of them occupy simultaneously: **library vs deployed service**, an
 If you want a turnkey dashboard with zero query code, one of the deployed tools is
 a better fit. If you want events in your own database alongside your app data with
 no extra infrastructure, that's tinywatch.
+
+<sub>¹ Analytics Engine retains 90 days; Counterscale can additionally archive to R2 (Apache Arrow) for longer retention.
+² PostHog's open-source self-host still exists (Docker "hobby" deploy) but is no longer recommended — Kubernetes deploys are deprecated, there's no support, and it targets ~100k events/mo before migrating to Cloud.
+<br>Competitor facts verified 2026-05-29 against vendor docs ([Counterscale](https://github.com/benvinegar/counterscale), [Rybbit](https://rybbit.com/docs/self-hosting-guides/self-hosting-manual), [PostHog](https://posthog.com/docs/self-host), [Plausible](https://clickhouse.com/blog/plausible-analytics-uses-click-house-to-power-their-privacy-friendly-google-analytics-alternative), [Umami](https://github.com/umami-software/umami), [Tinybird](https://www.tinybird.co/clickhouse)).</sub>
 
 ## License
 
