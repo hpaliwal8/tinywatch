@@ -44,7 +44,10 @@ function trackScrollDepth(track: Track): void {
     "scroll",
     () => {
       const h = document.documentElement;
-      const pct = Math.round(((h.scrollTop + h.clientHeight) / h.scrollHeight) * 100);
+      // Guard non-scrollable / zero-height docs: scrollHeight <= clientHeight
+      // means there's nothing to scroll, so avoid NaN (0/0) and bogus 100% fires.
+      if (h.scrollHeight <= h.clientHeight) return;
+      const pct = Math.min(100, Math.round(((h.scrollTop + h.clientHeight) / h.scrollHeight) * 100));
       for (const mark of [25, 50, 75, 100]) {
         if (pct >= mark && !seen.has(mark)) {
           seen.add(mark);

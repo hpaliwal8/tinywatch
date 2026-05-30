@@ -74,6 +74,7 @@
       }
     },
     "./server": {
+      "browser": null,
       "node": {
         "import": {
           "types": "./dist/server.d.ts",
@@ -153,7 +154,7 @@
       "path": "dist/index.js",
       "import": "{ init, track, identify }",
       "ignore": ["./transport-*", "./autocapture-*", "./sections-*"],
-      "limit": "900 B",
+      "limit": "1 kB",
       "gzip": true
     },
     {

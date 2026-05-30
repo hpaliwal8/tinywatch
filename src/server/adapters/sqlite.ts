@@ -78,10 +78,12 @@ export function sqliteAdapter(db: Database.Database): DbAdapter {
       return db
         .prepare(`
           SELECT json_extract(props, '$.section') AS section,
-                 SUM(json_extract(props, '$.dwellMs')) AS totalMs,
+                 COALESCE(SUM(json_extract(props, '$.dwellMs')), 0) AS totalMs,
                  COUNT(*) AS views
           FROM tw_events
-          WHERE name = '$section' AND ts BETWEEN ? AND ?
+          WHERE name = '$section'
+            AND json_extract(props, '$.section') IS NOT NULL
+            AND ts BETWEEN ? AND ?
           GROUP BY section
           ORDER BY totalMs DESC
         `)
