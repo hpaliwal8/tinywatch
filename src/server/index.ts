@@ -12,6 +12,9 @@ import { rateLimited } from "./rate-limit";
 
 /** Max events accepted in a single batch — bounds per-request write amplification. */
 const MAX_BATCH = 1000;
+/** Max request body size, checked via Content-Length before parsing, to bound the
+ *  parse-then-check window (MAX_BATCH=1000 events of bounded fields fit well under). */
+const MAX_BODY_BYTES = 512 * 1024;
 /** Max serialized size of an event's props; oversized props are dropped, not stored. */
 const MAX_PROPS_BYTES = 8 * 1024;
 /** Max length for free-text string fields (name, path, ids). */
@@ -64,6 +67,14 @@ export function createHandler(config: HandlerConfig) {
       return json({ error: "rate limited" }, 429, headers);
     }
 
+    // Reject oversized bodies before buffering/parsing them. Content-Length can be
+    // absent or spoofed (chunked encoding), so this closes the common case; the
+    // MAX_BATCH / MAX_PROPS_BYTES caps below bound the rest.
+    const len = Number(req.headers.get("content-length"));
+    if (Number.isFinite(len) && len > MAX_BODY_BYTES) {
+      return json({ error: "payload too large" }, 413, headers);
+    }
+
     let batch: EventBatch;
     try {
       batch = (await req.json()) as EventBatch;
@@ -85,7 +96,13 @@ export function createHandler(config: HandlerConfig) {
       const row = normalize(e, ctx, now);
       if (row) rows.push(row);
     }
-    await adapter.insertEvents(rows);
+    try {
+      await adapter.insertEvents(rows);
+    } catch {
+      // A storage failure must not produce a runtime-dependent, CORS-less 500.
+      // 503 is retryable and keeps the CORS headers so the browser can read it.
+      return json({ error: "storage unavailable" }, 503, headers);
+    }
     return json({ ok: true, stored: rows.length }, 200, headers);
   };
 }

@@ -278,4 +278,29 @@ describe("handler hardening", () => {
     // does NOT — proving the ts was kept at +10min, not flattened back to ~now.
     expect(await adapter.getVisitors({ from: now - 1000, to: now + 5 * 60_000 })).toBe(0);
   });
+
+  it("returns 503 (with CORS) when the adapter insert fails, not an opaque 500", async () => {
+    const failing: DbAdapter = {
+      ...adapter,
+      insertEvents: () => Promise.reject(new Error("db down")),
+    };
+    const handler = createHandler({ adapter: failing, cors: ["https://app.example"] });
+    const res = await handler(batchRequest([validEvent()], { origin: "https://app.example" }));
+    expect(res.status).toBe(503);
+    expect(await res.json()).toEqual({ error: "storage unavailable" });
+    // CORS headers preserved so the browser can actually read the error.
+    expect(res.headers.get("access-control-allow-origin")).toBe("https://app.example");
+  });
+
+  it("rejects an oversized body via Content-Length before parsing (413)", async () => {
+    const handler = createHandler({ adapter });
+    const req = new Request("https://x.test", {
+      method: "POST",
+      headers: { "content-type": "application/json", "content-length": String(2 * 1024 * 1024) },
+      body: JSON.stringify({ events: [validEvent()], v: "x" }),
+    });
+    const res = await handler(req);
+    expect(res.status).toBe(413);
+    expect(await createQueries({ adapter }).getVisitors()).toBe(0); // nothing stored
+  });
 });
