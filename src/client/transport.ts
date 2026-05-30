@@ -5,6 +5,8 @@ const VERSION = "0.1.0";
 export interface Transport {
   enqueue(event: TinywatchEvent): void;
   flush(useBeacon?: boolean): void;
+  /** Final flush, clear the interval, and remove listeners. */
+  shutdown(): void;
 }
 
 /**
@@ -39,16 +41,19 @@ export function createTransport(
     });
   }
 
-  setInterval(() => flush(), flushInterval);
+  const timer = setInterval(() => flush(), flushInterval);
+  const onUnload = () => flush(true);
+  // visibilitychange is more reliable than beforeunload on mobile.
+  const onVisibility = () => {
+    if (typeof document !== "undefined" && document.visibilityState === "hidden") flush(true);
+  };
   // Guard for non-browser hosts (SSR, tests, workers without these globals):
   // wiring up listeners is best-effort, so the transport degrades to a plain
   // interval+manual-flush sink rather than throwing at construction time.
-  if (typeof addEventListener === "function") {
-    addEventListener("beforeunload", () => flush(true));
-    // visibilitychange is more reliable than beforeunload on mobile.
-    addEventListener("visibilitychange", () => {
-      if (typeof document !== "undefined" && document.visibilityState === "hidden") flush(true);
-    });
+  const canListen = typeof addEventListener === "function";
+  if (canListen) {
+    addEventListener("beforeunload", onUnload);
+    addEventListener("visibilitychange", onVisibility);
   }
 
   return {
@@ -57,5 +62,13 @@ export function createTransport(
       if (buf.length >= batchSize) flush();
     },
     flush,
+    shutdown(): void {
+      flush(true);
+      clearInterval(timer);
+      if (canListen) {
+        removeEventListener("beforeunload", onUnload);
+        removeEventListener("visibilitychange", onVisibility);
+      }
+    },
   };
 }

@@ -14,6 +14,7 @@ const DEFAULTS = {
 let cfg: Required<ClientConfig> | undefined;
 let transport: Transport | undefined;
 let knownUserId: string | undefined;
+let preloadHide: (() => void) | undefined;
 
 // Events fired before the transport chunk finishes loading land here, then drain
 // once it's ready. Keeping the batching machinery out of the synchronous bundle
@@ -25,32 +26,36 @@ export function init(config: ClientConfig): void {
   cfg = { ...DEFAULTS, ...config };
 
   // Safety net: if the page is closed before the transport chunk arrives, beacon
-  // out whatever is buffered. Removed once the real transport takes over flushing.
-  const onHide = () => {
-    if (pending.length === 0 || transport) return;
+  // out whatever is buffered. Removed by shutdown().
+  preloadHide = () => {
+    if (document.visibilityState !== "hidden" || pending.length === 0 || transport) return;
     // Version inlined (not imported) so this path doesn't pull transport.ts into
     // the synchronous core bundle. Keep in sync with VERSION in transport.ts.
     navigator.sendBeacon?.(cfg!.endpoint, JSON.stringify({ events: pending, v: "0.1.0" }));
     pending = [];
   };
-  addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "hidden") onHide();
-  });
+  addEventListener("visibilitychange", preloadHide);
 
   // Fire the first pageview on the critical path (it buffers into `pending`)...
   track("$pageview");
 
   // ...then load the transport + autocapture lazily so neither blocks first byte
-  // nor lands in the synchronous core bundle.
+  // nor lands in the synchronous core bundle. Capture cfg locally: if shutdown()
+  // (or a re-init) swaps it out while these imports are in flight, the callbacks
+  // must NOT build a transport against stale config — that would re-leak a timer
+  // after teardown and read a cleared cfg.
+  const c = cfg;
   void import("./transport").then(({ createTransport }) => {
-    transport = createTransport(cfg!.endpoint, cfg!.flushInterval, cfg!.batchSize);
+    if (cfg !== c) return; // shut down (or re-inited) before the chunk loaded
+    transport = createTransport(c.endpoint, c.flushInterval, c.batchSize);
     for (const e of pending) transport.enqueue(e);
     pending = [];
   });
 
-  if (cfg.autocapture) {
+  if (c.autocapture) {
     void import("./autocapture").then(({ startAutocapture }) => {
-      startAutocapture(cfg!, track);
+      if (cfg !== c) return;
+      startAutocapture(c, track);
     });
   }
 }
@@ -74,6 +79,17 @@ export function identify(userId: string): void {
   knownUserId = userId;
 }
 
+/**
+ * Flush and tear down: clears the transport interval, removes listeners, and
+ * resets state so init() can run again. For SPA re-init, hot-reload, and tests.
+ */
+export function shutdown(): void {
+  if (preloadHide) removeEventListener("visibilitychange", preloadHide);
+  transport?.shutdown();
+  preloadHide = transport = cfg = knownUserId = undefined;
+  pending = [];
+}
+
 export function use(plugin: Plugin): void {
   if (!cfg) throw new Error("tinywatch: call init() before use()");
   const ctx: PluginContext = { track, config: cfg };
@@ -81,6 +97,6 @@ export function use(plugin: Plugin): void {
 }
 
 /** Convenience namespace for `tw.use(...)` ergonomics. */
-export const tw = { init, track, identify, use };
+export const tw = { init, track, identify, use, shutdown };
 
 export type { ClientConfig, Plugin, PluginContext } from "../types";

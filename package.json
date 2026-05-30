@@ -170,7 +170,7 @@
       "name": "client full (core + transport + autocapture + sections)",
       "path": "dist/index.js",
       "import": "*",
-      "limit": "2 kB",
+      "limit": "2.1 kB",
       "gzip": true
     }
   ],
