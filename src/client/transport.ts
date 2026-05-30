@@ -2,9 +2,13 @@ import type { EventBatch, TinywatchEvent } from "../types";
 
 const VERSION = "0.1.0";
 
+type ErrorHandler = (events: TinywatchEvent[], error: unknown) => void;
+
 export interface Transport {
   enqueue(event: TinywatchEvent): void;
   flush(useBeacon?: boolean): void;
+  /** Register a handler for failed (non-beacon) flushes. */
+  onError(handler: ErrorHandler): void;
   /** Final flush, clear the interval, and remove listeners. */
   shutdown(): void;
 }
@@ -20,12 +24,14 @@ export function createTransport(
   batchSize: number,
 ): Transport {
   let buf: TinywatchEvent[] = [];
+  let dead = false;
+  const errorHandlers: ErrorHandler[] = [];
 
   function flush(useBeacon = false): void {
     if (buf.length === 0) return;
-    const batch: EventBatch = { events: buf, v: VERSION };
+    const sent = buf;
     buf = [];
-    const body = JSON.stringify(batch);
+    const body = JSON.stringify({ events: sent, v: VERSION } satisfies EventBatch);
 
     if (useBeacon && navigator.sendBeacon) {
       navigator.sendBeacon(endpoint, body);
@@ -36,8 +42,18 @@ export function createTransport(
       headers: { "content-type": "application/json" },
       body,
       keepalive: true,
-    }).catch(() => {
-      // Best-effort. TODO: optional retry/backoff as a plugin, not in core.
+    }).catch((err: unknown) => {
+      // Don't surface failures once shut down (a late-rejecting fetch would
+      // otherwise schedule a retry against a torn-down client). One handler
+      // throwing must not starve the others.
+      if (dead) return;
+      for (const h of errorHandlers) {
+        try {
+          h(sent, err);
+        } catch {
+          // a misbehaving plugin handler shouldn't break the others
+        }
+      }
     });
   }
 
@@ -62,8 +78,12 @@ export function createTransport(
       if (buf.length >= batchSize) flush();
     },
     flush,
+    onError(handler: ErrorHandler): void {
+      errorHandlers.push(handler);
+    },
     shutdown(): void {
       flush(true);
+      dead = true; // ignore any in-flight fetch that rejects after this
       clearInterval(timer);
       if (canListen) {
         removeEventListener("beforeunload", onUnload);

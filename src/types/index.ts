@@ -44,16 +44,28 @@ export interface ClientConfig {
   noPersist?: boolean;
 }
 
+/** Tear down whatever a plugin's setup() registered. Returned from setup(). */
+export type Teardown = () => void;
+
 /** A client plugin registered via use(). */
 export interface Plugin {
   name: string;
-  setup(ctx: PluginContext): void;
+  /** Wire up the plugin. Return a Teardown to be called on shutdown(). */
+  setup(ctx: PluginContext): void | Teardown;
 }
 
 export interface PluginContext {
   track: (name: string, props?: Record<string, unknown>) => void;
   /** A read-only copy of the resolved config (mutating it does not affect the client). */
   config: Readonly<Required<ClientConfig>>;
+  /**
+   * Register a handler called when a (non-beacon) flush fails to reach the
+   * endpoint, with the events that didn't make it. Re-deliver them with
+   * reenqueue(). Handlers registered before the transport loads are buffered.
+   */
+  onFlushError(handler: (events: TinywatchEvent[], error: unknown) => void): void;
+  /** Put events back into the send buffer (preserves their original ids). */
+  reenqueue(events: TinywatchEvent[]): void;
 }
 
 /** Geo/IP info extracted server-side from platform headers. */

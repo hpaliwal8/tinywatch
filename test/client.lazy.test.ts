@@ -255,4 +255,31 @@ describe("use() plugins", () => {
     // All events still flush to the original endpoint, not the mutated one.
     expect(stubs.beaconCalls.every((c) => c.url === "/api/tw")).toBe(true);
   });
+
+  it("calls a plugin's returned teardown on shutdown()", async () => {
+    const { init, use, shutdown } = await freshClient();
+    init({ endpoint: "/api/tw", autocapture: false });
+    const teardown = vi.fn();
+    use({ name: "p", setup: () => teardown });
+    expect(teardown).not.toHaveBeenCalled();
+    shutdown();
+    expect(teardown).toHaveBeenCalledTimes(1);
+  });
+
+  it("onFlushError registered before transport loads still fires on a failed flush", async () => {
+    // fetch rejects so the (non-beacon) interval/batch flush surfaces an error.
+    vi.stubGlobal("fetch", () => Promise.reject(new Error("offline")));
+    const { init, track, use } = await freshClient();
+    const failed: string[] = [];
+    init({ endpoint: "/api/tw", autocapture: false, batchSize: 1 });
+    // use() runs before the transport chunk resolves -> handler is buffered.
+    use({
+      name: "catcher",
+      setup(ctx) {
+        ctx.onFlushError((events) => failed.push(...events.map((e) => e.name)));
+      },
+    });
+    track("will_fail"); // batchSize 1 -> eager flush once transport loads
+    await vi.waitFor(() => expect(failed).toContain("will_fail"));
+  });
 });

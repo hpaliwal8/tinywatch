@@ -7,6 +7,7 @@ export default defineConfig({
     types: "src/types/index.ts",
     cli: "src/cli.ts",
     "plugins/outbound": "src/plugins/outbound.ts",
+    "plugins/retry": "src/plugins/retry.ts",
   },
   format: ["esm", "cjs"],
   dts: true,          // emits .d.ts (ESM) and .d.cts (CJS)

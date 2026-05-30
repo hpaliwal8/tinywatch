@@ -1,4 +1,4 @@
-import type { ClientConfig, Plugin, TinywatchEvent } from "../types";
+import type { ClientConfig, Plugin, PluginContext, TinywatchEvent } from "../types";
 import { getAnonymousId, getSessionId } from "./ids";
 import type { Transport } from "./transport";
 
@@ -21,6 +21,11 @@ let teardownAutocapture: (() => void) | undefined;
 // once it's ready. Keeping the batching machinery out of the synchronous bundle
 // is what keeps the core tiny.
 let pending: TinywatchEvent[] = [];
+
+// Plugin teardowns (from setup() return values) and flush-error handlers
+// registered via ctx.onFlushError before the transport chunk loads.
+let pluginTeardowns: (() => void)[] = [];
+let pendingErrorHandlers: ((events: TinywatchEvent[], error: unknown) => void)[] = [];
 
 export function init(config: ClientConfig): void {
   if (cfg) return; // idempotent
@@ -49,6 +54,8 @@ export function init(config: ClientConfig): void {
   void import("./transport").then(({ createTransport }) => {
     if (cfg !== c) return; // shut down (or re-inited) before the chunk loaded
     transport = createTransport(c.endpoint, c.flushInterval, c.batchSize);
+    for (const h of pendingErrorHandlers) transport.onError(h);
+    pendingErrorHandlers = [];
     for (const e of pending) transport.enqueue(e);
     pending = [];
   });
@@ -91,16 +98,34 @@ export function shutdown(): void {
   if (preloadHide) removeEventListener("visibilitychange", preloadHide);
   transport?.shutdown();
   teardownAutocapture?.(); // removes click/scroll/popstate/section listeners, restores history
+  for (const t of pluginTeardowns) t();
   preloadHide = transport = teardownAutocapture = knownUserId = cfg = undefined;
   pending = [];
+  pluginTeardowns = [];
+  pendingErrorHandlers = [];
 }
 
 export function use(plugin: Plugin): void {
   if (!cfg) throw new Error("tinywatch: init() before use()");
-  // Hand plugins a copy so they can read config but can't mutate the client's
-  // live cfg (autocapture reads cfg.* lazily per-event, so a mutation would
-  // silently change capture behavior).
-  plugin.setup({ track, config: { ...cfg } });
+  const ctx: PluginContext = {
+    track,
+    // A copy so plugins can read config but can't mutate the client's live cfg
+    // (autocapture reads cfg.* lazily per-event).
+    config: { ...cfg },
+    onFlushError(handler) {
+      // Wire straight to the transport if it's loaded, else buffer until it is.
+      if (transport) transport.onError(handler);
+      else pendingErrorHandlers.push(handler);
+    },
+    reenqueue(events) {
+      // Reuse the normal pending→drain path so ids/order are preserved and a
+      // re-delivered event dedups server-side on its original id.
+      if (transport) for (const e of events) transport.enqueue(e);
+      else pending.push(...events);
+    },
+  };
+  const teardown = plugin.setup(ctx);
+  if (teardown) pluginTeardowns.push(teardown);
 }
 
 export type { ClientConfig, Plugin, PluginContext } from "../types";

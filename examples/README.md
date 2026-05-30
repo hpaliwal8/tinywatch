@@ -29,14 +29,21 @@ First-party plugins live at `tinywatch/plugins/*` and register via `use()`:
 ```ts
 import { init, use } from "tinywatch";
 import { outbound } from "tinywatch/plugins/outbound";
+import { retry } from "tinywatch/plugins/retry";
 
 init({ endpoint: "/api/tw" });
-use(outbound()); // tracks clicks to external sites as "$outbound"
+use(outbound());          // tracks clicks to external sites as "$outbound"
+use(retry({ maxRetries: 5 })); // re-deliver failed flushes with exponential backoff
 ```
 
-`outbound` options: `eventName` (default `"$outbound"`) and `internalHosts`
-(extra hostnames to treat as internal). Each plugin is its own ~300 B chunk —
-you only pay for what you `use()`.
+- **`outbound`** — options: `eventName` (default `"$outbound"`), `internalHosts`
+  (extra hostnames to treat as internal).
+- **`retry`** — re-enqueues events whose flush failed, with exponential backoff
+  (`baseDelay`, `maxDelay`) and a per-batch `maxRetries` cap. Re-delivered events
+  keep their original ids, so they dedup server-side instead of double-counting.
+
+Each plugin is its own ~250–300 B chunk — you only pay for what you `use()`.
+Build your own with the `Plugin` / `PluginContext` types from `tinywatch`.
 
 ## Notes
 

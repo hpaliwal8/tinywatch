@@ -15,10 +15,13 @@ function fakeAnchor(href: string | null, text = "link") {
   return { closest: (sel: string) => (sel === "a" ? el : null) };
 }
 
+function mockCtx(track: PluginContext["track"]): PluginContext {
+  return { track, config: {} as PluginContext["config"], onFlushError() {}, reenqueue() {} };
+}
+
 function setup(opts?: Parameters<typeof outbound>[0]) {
   const track = vi.fn();
-  const ctx = { track, config: {} as PluginContext["config"] };
-  outbound(opts).setup(ctx);
+  outbound(opts).setup(mockCtx(track));
   return { track, click: (target: unknown) => clickHandler?.({ target }) };
 }
 
@@ -84,6 +87,6 @@ describe("outbound plugin", () => {
   it("is a no-op when document is undefined (non-browser)", () => {
     vi.stubGlobal("document", undefined);
     const track = vi.fn();
-    expect(() => outbound().setup({ track, config: {} as PluginContext["config"] })).not.toThrow();
+    expect(() => outbound().setup(mockCtx(track))).not.toThrow();
   });
 });

@@ -48,6 +48,9 @@
       ],
       "plugins/outbound": [
         "./dist/plugins/outbound.d.ts"
+      ],
+      "plugins/retry": [
+        "./dist/plugins/retry.d.ts"
       ]
     }
   },
@@ -121,6 +124,16 @@
         "default": "./dist/plugins/outbound.cjs"
       }
     },
+    "./plugins/retry": {
+      "import": {
+        "types": "./dist/plugins/retry.d.ts",
+        "default": "./dist/plugins/retry.js"
+      },
+      "require": {
+        "types": "./dist/plugins/retry.d.cts",
+        "default": "./dist/plugins/retry.cjs"
+      }
+    },
     "./package.json": "./package.json"
   },
   "scripts": {
@@ -169,7 +182,7 @@
   },
   "size-limit": [
     {
-      "name": "client core — init+track (named imports tree-shake to ~814B; size-limit retains use/shutdown via shared bindings so reports higher)",
+      "name": "client core — init+track (real tree-shaken consumer ~831B; size-limit can't isolate use/shutdown so reports ~1.01kB)",
       "path": "dist/index.js",
       "import": "{ init, track, identify }",
       "ignore": [
@@ -177,20 +190,27 @@
         "./autocapture-*",
         "./sections-*"
       ],
-      "limit": "1 kB",
+      "limit": "1.05 kB",
       "gzip": true
     },
     {
       "name": "client full (core + transport + autocapture + sections, all lazy-loaded)",
       "path": "dist/index.js",
       "import": "*",
-      "limit": "2.2 kB",
+      "limit": "2.3 kB",
       "gzip": true
     },
     {
       "name": "plugin: outbound",
       "path": "dist/plugins/outbound.js",
       "import": "{ outbound }",
+      "limit": "500 B",
+      "gzip": true
+    },
+    {
+      "name": "plugin: retry",
+      "path": "dist/plugins/retry.js",
+      "import": "{ retry }",
       "limit": "500 B",
       "gzip": true
     }
