@@ -117,6 +117,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:pg": "vitest run test/postgres.real.test.ts",
     "size": "size-limit",
     "attw": "attw --pack .",
     "prepublishOnly": "npm run clean && npm run build && npm run attw"

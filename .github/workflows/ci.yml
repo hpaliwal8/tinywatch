@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Cancel superseded runs on the same ref.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  gate:
+    name: typecheck · test · build · size · attw
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      # build must precede size + attw (both read dist/ and the packed tarball).
+      - run: npm run build
+      - run: npm run size
+      - run: npm run attw
+
+  postgres:
+    name: real-postgres adapter tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: tinywatch
+          POSTGRES_PASSWORD: tinywatch
+          POSTGRES_DB: tinywatch
+        ports:
+          - 5432:5432
+        # Wait until Postgres is accepting connections before the job runs.
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      # Covers what pg-mem can't: migrate idempotency, the 65535-param ceiling,
+      # intra-batch dedup, and the non-numeric dwellMs cast behavior.
+      - run: npm run test:pg
+        env:
+          TINYWATCH_PG_URL: postgres://tinywatch:tinywatch@localhost:5432/tinywatch
