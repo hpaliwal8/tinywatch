@@ -22,6 +22,22 @@ init({ endpoint: "/api/tw" });
 
 Then `data-tw-track="signup"` / `data-tw-section="pricing"` attributes do the rest.
 
+## Plugins
+
+First-party plugins live at `tinywatch/plugins/*` and register via `use()`:
+
+```ts
+import { init, use } from "tinywatch";
+import { outbound } from "tinywatch/plugins/outbound";
+
+init({ endpoint: "/api/tw" });
+use(outbound()); // tracks clicks to external sites as "$outbound"
+```
+
+`outbound` options: `eventName` (default `"$outbound"`) and `internalHosts`
+(extra hostnames to treat as internal). Each plugin is its own ~300 B chunk —
+you only pay for what you `use()`.
+
 ## Notes
 
 - **CORS:** the handler defaults to `*`. In production pass `cors: ["https://yourapp.com"]`

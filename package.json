@@ -45,6 +45,9 @@
       ],
       "types": [
         "./dist/types.d.ts"
+      ],
+      "plugins/outbound": [
+        "./dist/plugins/outbound.d.ts"
       ]
     }
   },
@@ -106,6 +109,16 @@
       "require": {
         "types": "./dist/types.d.cts",
         "default": "./dist/types.cjs"
+      }
+    },
+    "./plugins/outbound": {
+      "import": {
+        "types": "./dist/plugins/outbound.d.ts",
+        "default": "./dist/plugins/outbound.js"
+      },
+      "require": {
+        "types": "./dist/plugins/outbound.d.cts",
+        "default": "./dist/plugins/outbound.cjs"
       }
     },
     "./package.json": "./package.json"
@@ -172,6 +185,13 @@
       "path": "dist/index.js",
       "import": "*",
       "limit": "2.2 kB",
+      "gzip": true
+    },
+    {
+      "name": "plugin: outbound",
+      "path": "dist/plugins/outbound.js",
+      "import": "{ outbound }",
+      "limit": "500 B",
       "gzip": true
     }
   ],

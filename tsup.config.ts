@@ -6,6 +6,7 @@ export default defineConfig({
     server: "src/server/index.ts",
     types: "src/types/index.ts",
     cli: "src/cli.ts",
+    "plugins/outbound": "src/plugins/outbound.ts",
   },
   format: ["esm", "cjs"],
   dts: true,          // emits .d.ts (ESM) and .d.cts (CJS)
