@@ -1,26 +1,145 @@
-import type { DbAdapter } from "../../types";
+import type {
+  CountryCount,
+  DbAdapter,
+  SectionDwell,
+  StoredEvent,
+  TimeRange,
+} from "../../types";
 import type { Pool } from "pg";
 
-// Postgres dialect differs from SQLite in two places:
+// Postgres is the one adapter with real dialect divergence from sqlite.ts:
 //   • placeholders are $1, $2, ... (not ?)
-//   • JSON access is props->>'section' / (props->>'dwellMs')::int (not json_extract)
-//   • store `props` as JSONB and use BIGINT for ts/received_at
-// Otherwise the query shapes match adapters/sqlite.ts.
-export function postgresAdapter(_pool: Pool): DbAdapter {
-  return unimplemented("postgres");
+//   • props is JSONB; JSON access is props->>'section' and
+//     (props->>'dwellMs')::numeric (not json_extract)
+//   • ts / received_at are BIGINT
+//   • dedup is ON CONFLICT (id) DO NOTHING (not INSERT OR IGNORE)
+// The query *shapes* still mirror sqlite.ts.
+
+// pg returns BIGINT and COUNT(*) as strings (to avoid precision loss), so always
+// coerce numeric reads. Values here are well within Number's safe range.
+function num(v: unknown): number {
+  return Number(v ?? 0);
 }
 
-function unimplemented(name: string): DbAdapter {
-  const fail = () =>
-    Promise.reject(
-      new Error(`tinywatch: '${name}' adapter not implemented yet — port the SQL from adapters/sqlite.ts`),
-    );
+const COLUMNS = 12; // columns per inserted row, for $-placeholder grouping
+
+/** Pass a node-postgres Pool you already own, e.g. `postgresAdapter(new Pool())`. */
+export function postgresAdapter(pool: Pool): DbAdapter {
   return {
-    migrate: fail,
-    insertEvents: fail,
-    getVisitors: fail,
-    getSessions: fail,
-    getSectionDwell: fail,
-    getTopCountries: fail,
+    async migrate() {
+      // One statement per query() — clearer errors, and avoids drivers/poolers
+      // that reject multiple statements in a single simple query.
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS tw_events (
+          id           TEXT PRIMARY KEY,
+          name         TEXT NOT NULL,
+          anonymous_id TEXT NOT NULL,
+          user_id      TEXT,
+          session_id   TEXT NOT NULL,
+          path         TEXT,
+          props        JSONB,
+          country      TEXT,
+          city         TEXT,
+          user_agent   TEXT,
+          ts           BIGINT NOT NULL,
+          received_at  BIGINT NOT NULL
+        )
+      `);
+      await pool.query(`CREATE INDEX IF NOT EXISTS idx_tw_events_ts      ON tw_events(ts)`);
+      await pool.query(`CREATE INDEX IF NOT EXISTS idx_tw_events_name    ON tw_events(name)`);
+      await pool.query(`CREATE INDEX IF NOT EXISTS idx_tw_events_session ON tw_events(session_id)`);
+    },
+
+    async insertEvents(events: StoredEvent[]) {
+      if (events.length === 0) return;
+      // One multi-row INSERT: atomic and a single round-trip. Build VALUES groups
+      // ($1,...,$12),($13,...,$24),... and flatten the args in the same order.
+      const groups: string[] = [];
+      const args: unknown[] = [];
+      events.forEach((e, i) => {
+        const b = i * COLUMNS;
+        groups.push(
+          `($${b + 1}, $${b + 2}, $${b + 3}, $${b + 4}, $${b + 5}, $${b + 6}, $${b + 7}::jsonb, $${b + 8}, $${b + 9}, $${b + 10}, $${b + 11}, $${b + 12})`,
+        );
+        args.push(
+          e.id,
+          e.name,
+          e.anonymousId,
+          e.userId ?? null,
+          e.sessionId,
+          e.path ?? null,
+          e.props ? JSON.stringify(e.props) : null,
+          e.country ?? null,
+          e.city ?? null,
+          e.userAgent ?? null,
+          e.ts,
+          e.receivedAt,
+        );
+      });
+      await pool.query(
+        `INSERT INTO tw_events
+           (id, name, anonymous_id, user_id, session_id, path, props, country, city, user_agent, ts, received_at)
+         VALUES ${groups.join(", ")}
+         ON CONFLICT (id) DO NOTHING`,
+        args,
+      );
+    },
+
+    async getVisitors({ from, to }: TimeRange) {
+      const { rows } = await pool.query(
+        `SELECT COUNT(DISTINCT anonymous_id) AS n FROM tw_events WHERE ts BETWEEN $1 AND $2`,
+        [from, to],
+      );
+      return num(rows[0]?.n);
+    },
+
+    async getSessions({ from, to }: TimeRange) {
+      const { rows } = await pool.query(
+        `SELECT COUNT(DISTINCT session_id) AS n FROM tw_events WHERE ts BETWEEN $1 AND $2`,
+        [from, to],
+      );
+      return num(rows[0]?.n);
+    },
+
+    async getSectionDwell({ from, to }: TimeRange): Promise<SectionDwell[]> {
+      const { rows } = await pool.query(
+        `SELECT props->>'section' AS section,
+                COALESCE(SUM((props->>'dwellMs')::numeric), 0) AS "totalMs",
+                COUNT(*) AS views
+         FROM tw_events
+         WHERE name = '$section'
+           AND props->>'section' IS NOT NULL
+           AND ts BETWEEN $1 AND $2
+         GROUP BY props->>'section'
+         ORDER BY "totalMs" DESC`,
+        [from, to],
+      );
+      return rows.map((r) => ({
+        section: String(r.section),
+        totalMs: num(r.totalMs),
+        views: num(r.views),
+      }));
+    },
+
+    async getTopCountries({ from, to }: TimeRange): Promise<CountryCount[]> {
+      const { rows } = await pool.query(
+        `SELECT country, COUNT(DISTINCT anonymous_id) AS visitors
+         FROM tw_events
+         WHERE country IS NOT NULL AND ts BETWEEN $1 AND $2
+         GROUP BY country
+         ORDER BY visitors DESC
+         LIMIT 20`,
+        [from, to],
+      );
+      return rows.map((r) => ({
+        country: String(r.country),
+        visitors: num(r.visitors),
+      }));
+    },
+
+    async pruneBefore(before: number) {
+      const res = await pool.query(`DELETE FROM tw_events WHERE ts < $1`, [before]);
+      return res.rowCount ?? 0;
+    },
   };
 }

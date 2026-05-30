@@ -40,8 +40,12 @@
   "types": "./dist/index.d.ts",
   "typesVersions": {
     "*": {
-      "server": ["./dist/server.d.ts"],
-      "types": ["./dist/types.d.ts"]
+      "server": [
+        "./dist/server.d.ts"
+      ],
+      "types": [
+        "./dist/types.d.ts"
+      ]
     }
   },
   "bin": {
@@ -143,6 +147,7 @@
     "@types/pg": "^8.11.10",
     "better-sqlite3": "^11.7.0",
     "pg": "^8.13.1",
+    "pg-mem": "^3.0.14",
     "size-limit": "^11.1.6",
     "tsup": "^8.3.5",
     "typescript": "^5.7.2",
@@ -153,7 +158,11 @@
       "name": "client core — synchronous critical path (init + track, lazy chunks excluded)",
       "path": "dist/index.js",
       "import": "{ init, track, identify }",
-      "ignore": ["./transport-*", "./autocapture-*", "./sections-*"],
+      "ignore": [
+        "./transport-*",
+        "./autocapture-*",
+        "./sections-*"
+      ],
       "limit": "1 kB",
       "gzip": true
     },
