@@ -58,10 +58,21 @@ describe("postgres adapter contract (pg-mem)", () => {
     expect(await createQueries({ adapter }).getVisitors()).toBe(0);
   });
 
-  it("ON CONFLICT (id) DO NOTHING dedupes", async () => {
+  it("ON CONFLICT (id) DO NOTHING dedupes across separate inserts", async () => {
     const row = evt({ id: "dup" });
     await adapter.insertEvents([row]);
     await adapter.insertEvents([row]);
+    expect(await createQueries({ adapter }).getVisitors()).toBe(1);
+  });
+
+  it("dedupes duplicate ids WITHIN a single batch (parity with INSERT OR IGNORE)", async () => {
+    // A single multi-row INSERT can't use ON CONFLICT to resolve intra-statement
+    // duplicates (real PG raises a cardinality violation for DO UPDATE, and the
+    // behavior is murky for DO NOTHING) — so the adapter dedups in JS first,
+    // keeping the first occurrence like the SQLite-family adapters do.
+    const a = evt({ id: "same", anonymousId: "first" });
+    const b = evt({ id: "same", anonymousId: "second" });
+    await adapter.insertEvents([a, b]);
     expect(await createQueries({ adapter }).getVisitors()).toBe(1);
   });
 

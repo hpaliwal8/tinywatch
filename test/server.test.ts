@@ -236,6 +236,14 @@ describe("handler hardening", () => {
     expect(dwell.every((d) => typeof d.totalMs === "number")).toBe(true);
   });
 
+  it("dedupes duplicate ids within a single insertEvents batch (parity)", async () => {
+    await adapter.insertEvents([
+      { id: "same", name: "$pageview", anonymousId: "first", sessionId: "s", path: "/", ts: Date.now(), receivedAt: Date.now() },
+      { id: "same", name: "$pageview", anonymousId: "second", sessionId: "s", path: "/", ts: Date.now(), receivedAt: Date.now() },
+    ]);
+    expect(await createQueries({ adapter }).getVisitors()).toBe(1);
+  });
+
   it("coerces a numeric section value to a string (parity with the turso adapter)", async () => {
     const now = Date.now();
     await adapter.insertEvents([

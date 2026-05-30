@@ -52,11 +52,18 @@ export function postgresAdapter(pool: Pool): DbAdapter {
 
     async insertEvents(events: StoredEvent[]) {
       if (events.length === 0) return;
+      // Dedup by id within the batch (keep first), mirroring the per-row
+      // INSERT OR IGNORE "first writer wins" of the SQLite-family adapters.
+      // A single multi-row INSERT can't rely on ON CONFLICT to resolve
+      // intra-statement duplicates, so resolve them here for provable parity.
+      const seen = new Set<string>();
+      const rows = events.filter((e) => (seen.has(e.id) ? false : (seen.add(e.id), true)));
+
       // One multi-row INSERT: atomic and a single round-trip. Build VALUES groups
       // ($1,...,$12),($13,...,$24),... and flatten the args in the same order.
       const groups: string[] = [];
       const args: unknown[] = [];
-      events.forEach((e, i) => {
+      rows.forEach((e, i) => {
         const b = i * COLUMNS;
         groups.push(
           `($${b + 1}, $${b + 2}, $${b + 3}, $${b + 4}, $${b + 5}, $${b + 6}, $${b + 7}::jsonb, $${b + 8}, $${b + 9}, $${b + 10}, $${b + 11}, $${b + 12})`,
@@ -103,6 +110,12 @@ export function postgresAdapter(pool: Pool): DbAdapter {
 
     async getSectionDwell({ from, to }: TimeRange): Promise<SectionDwell[]> {
       const { rows } = await pool.query(
+        // NOTE: a non-numeric string dwellMs (e.g. "100ms") makes ::numeric throw
+        // on real Postgres, whereas the SQLite-family adapters silently coerce —
+        // a known divergence (tracked) that only the real-PG CI parity job can
+        // exercise, since pg-mem neither enforces numeric validation nor supports
+        // the `~` / jsonb_typeof guards a fix would need. Autocapture only ever
+        // emits a numeric dwellMs, so this is malformed-input-only.
         `SELECT props->>'section' AS section,
                 COALESCE(SUM((props->>'dwellMs')::numeric), 0) AS "totalMs",
                 COUNT(*) AS views

@@ -57,6 +57,11 @@ describe("turso adapter contract", () => {
     expect(await createQueries({ adapter }).getVisitors()).toBe(1);
   });
 
+  it("dedupes duplicate ids within a single batch (parity)", async () => {
+    await adapter.insertEvents([evt({ id: "same", anonymousId: "first" }), evt({ id: "same", anonymousId: "second" })]);
+    expect(await createQueries({ adapter }).getVisitors()).toBe(1);
+  });
+
   it("aggregates section dwell and never returns null totals", async () => {
     const now = Date.now();
     await adapter.insertEvents([
