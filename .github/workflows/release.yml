@@ -1,0 +1,49 @@
+name: Release
+
+# Publishes to npm with provenance when a v* tag is pushed, e.g.:
+#   git tag v1.0.0 && git push origin v1.0.0
+#
+# Requires an NPM_TOKEN repo secret (an npm automation token with publish rights).
+# Provenance is generated from this workflow's OIDC identity — no extra config.
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # required for npm provenance (OIDC)
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: "https://registry.npmjs.org" # sets up auth via NODE_AUTH_TOKEN
+      - run: npm ci
+
+      # Gate before publishing — never ship a build that doesn't pass.
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+      - run: npm run size
+      - run: npm run attw
+
+      # Fail early if the tag doesn't match package.json version (avoids a v1.0.0
+      # tag publishing a 1.0.1 package or vice versa).
+      - name: Verify tag matches package version
+        run: |
+          PKG=$(node -p "require('./package.json').version")
+          TAG=${GITHUB_REF_NAME#v}
+          if [ "$PKG" != "$TAG" ]; then
+            echo "Tag v$TAG does not match package.json version $PKG"; exit 1
+          fi
+
+      # publishConfig in package.json already sets access:public + provenance:true.
+      # prepublishOnly (clean+build+attw) runs automatically.
+      - run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
