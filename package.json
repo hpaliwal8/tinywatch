@@ -1,17 +1,17 @@
 {
   "name": "tinywatch",
   "version": "0.1.0",
-  "description": "Tiny, embeddable web analytics: a ~600B client SDK plus a server handler that writes to your own database. A dependency, not a deployment.",
+  "description": "Tiny, embeddable web analytics: a ~900B client SDK plus a server handler that writes to your own database. A dependency, not a deployment.",
   "type": "module",
   "license": "MIT",
-  "author": "YOUR_NAME <you@example.com>",
-  "homepage": "https://github.com/YOU/tinywatch#readme",
+  "author": "Hitansh Paliwal <paliwalhitansh@gmail.com>",
+  "homepage": "https://github.com/hpaliwal8/tinywatch#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/YOU/tinywatch.git"
+    "url": "git+https://github.com/hpaliwal8/tinywatch.git"
   },
   "bugs": {
-    "url": "https://github.com/YOU/tinywatch/issues"
+    "url": "https://github.com/hpaliwal8/tinywatch/issues"
   },
   "keywords": [
     "analytics",
@@ -38,6 +38,12 @@
   "module": "./dist/index.js",
   "browser": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "typesVersions": {
+    "*": {
+      "server": ["./dist/server.d.ts"],
+      "types": ["./dist/types.d.ts"]
+    }
+  },
   "bin": {
     "tinywatch": "./dist/cli.js"
   },
@@ -127,7 +133,7 @@
     }
   },
   "devDependencies": {
-    "@arethetypeswrong/cli": "^0.17.0",
+    "@arethetypeswrong/cli": "^0.18.0",
     "@cloudflare/workers-types": "^4.20241218.0",
     "@libsql/client": "^0.14.0",
     "@size-limit/preset-small-lib": "^11.1.6",
