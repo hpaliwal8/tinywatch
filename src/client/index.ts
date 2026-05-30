@@ -37,7 +37,7 @@ export function init(config: ClientConfig): void {
     if (document.visibilityState !== "hidden" || pending.length === 0 || transport) return;
     // Version inlined (not imported) so this path doesn't pull transport.ts into
     // the synchronous core bundle. Keep in sync with VERSION in transport.ts.
-    navigator.sendBeacon?.(cfg!.endpoint, JSON.stringify({ events: pending, v: "0.1.0" }));
+    navigator.sendBeacon?.(cfg!.endpoint, JSON.stringify({ events: pending, v: "1.0.0" }));
     pending = [];
   };
   addEventListener("visibilitychange", preloadHide);

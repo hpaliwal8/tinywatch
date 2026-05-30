@@ -48,6 +48,34 @@ await stats.getVisitors();     // last 7 days
 await stats.getTopCountries();
 ```
 
+Any adapter works the same way — swap `sqliteAdapter` for `tursoAdapter`,
+`d1Adapter`, or `postgresAdapter`.
+
+## Plugins
+
+Opt-in behavior via `use()`. Each plugin is its own ~250–300 B chunk loaded only
+when you import it — you pay for nothing you don't use.
+
+```ts
+import { init, use } from "tinywatch";
+import { outbound } from "tinywatch/plugins/outbound";
+import { retry } from "tinywatch/plugins/retry";
+
+init({ endpoint: "/api/tw" });
+use(outbound());               // track clicks to external sites as "$outbound"
+use(retry({ maxRetries: 5 })); // re-deliver failed flushes with exponential backoff
+```
+
+Write your own with the `Plugin` / `PluginContext` types from `tinywatch`.
+See [examples/](examples/) for framework mounts (Next.js, Cloudflare Workers,
+Hono, raw Node) and more.
+
+## Lifecycle
+
+`init()` is idempotent. For SPA re-init, hot-reload, or teardown, call
+`shutdown()` — it flushes, removes all listeners, restores patched history, and
+resets state so `init()` can run cleanly again.
+
 ## Why not just use X?
 
 tinywatch occupies a cell nobody else does: it's a **library** whose data lives

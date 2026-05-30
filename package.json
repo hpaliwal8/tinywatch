@@ -1,6 +1,6 @@
 {
   "name": "tinywatch",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Tiny, embeddable web analytics: a ~900B client SDK plus a server handler that writes to your own database. A dependency, not a deployment.",
   "type": "module",
   "license": "MIT",
@@ -60,7 +60,8 @@
   "files": [
     "dist",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "CHANGELOG.md"
   ],
   "exports": {
     ".": {

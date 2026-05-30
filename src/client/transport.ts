@@ -1,6 +1,6 @@
 import type { EventBatch, TinywatchEvent } from "../types";
 
-const VERSION = "0.1.0";
+const VERSION = "1.0.0";
 
 type ErrorHandler = (events: TinywatchEvent[], error: unknown) => void;
 
