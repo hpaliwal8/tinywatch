@@ -18,7 +18,10 @@ const MAX_PROPS_BYTES = 8 * 1024;
 const MAX_STR = 1024;
 /** How far a client `ts` may sit outside server time before we fall back to receivedAt. */
 const MAX_PAST_MS = 7 * 864e5; // 7 days
-const MAX_FUTURE_MS = 5 * 60_000; // 5 minutes
+// Tolerate ordinary client clock skew (drifted laptops are commonly minutes-to-
+// hours fast); only clamp clearly-bogus far-future timestamps that could evade
+// pruning. A day of slack still blocks the abuse case without flattening real data.
+const MAX_FUTURE_MS = 864e5; // 1 day
 
 /** Returns a portable Web-standard (Request → Response) ingestion handler. */
 export function createHandler(config: HandlerConfig) {
@@ -67,7 +70,11 @@ export function createHandler(config: HandlerConfig) {
     } catch {
       return json({ error: "invalid json" }, 400, headers);
     }
-    if (!batch?.events?.length) return json({ ok: true, stored: 0 }, 200, headers);
+    // Guard the container type, not just length: a non-array `events` with a
+    // `length` prop would otherwise reach the for...of below and throw a 500.
+    if (!Array.isArray(batch?.events) || batch.events.length === 0) {
+      return json({ ok: true, stored: 0 }, 200, headers);
+    }
     if (batch.events.length > MAX_BATCH) {
       return json({ error: "batch too large" }, 413, headers);
     }

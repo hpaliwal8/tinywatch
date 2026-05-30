@@ -106,6 +106,16 @@ describe("turso adapter contract", () => {
     expect(await adapter.getVisitors({ from: 0, to: now + 5000 })).toBe(1);
   });
 
+  it("coerces a numeric section value to a string (parity with the sqlite adapter)", async () => {
+    const now = Date.now();
+    await adapter.insertEvents([
+      evt({ name: "$section", props: { section: 123, dwellMs: 10 }, ts: now }),
+    ]);
+    const [row] = await createQueries({ adapter }).getSectionDwell();
+    expect(row).toEqual({ section: "123", totalMs: 10, views: 1 });
+    expect(typeof row!.section).toBe("string");
+  });
+
   it("round-trips props JSON and optional fields (userId/city)", async () => {
     await adapter.insertEvents([
       evt({ userId: "u1", city: "Berlin", country: "DE", props: { plan: "pro" } }),

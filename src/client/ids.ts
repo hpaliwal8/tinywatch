@@ -51,7 +51,16 @@ export function getSessionId(): string {
 function readSession(): { id: string; last: number } | undefined {
   try {
     const raw = sessionStorage.getItem(SESSION_KEY);
-    return raw ? (JSON.parse(raw) as { id: string; last: number }) : undefined;
+    if (!raw) return undefined;
+    // Validate shape: a stale or third-party-written record with a non-string
+    // `id` would otherwise become a non-string sessionId, which the server
+    // silently drops — losing the whole session's events. Reject it instead so
+    // getSessionId() mints a fresh valid one.
+    const p = JSON.parse(raw) as Record<string, unknown>;
+    if (typeof p?.id === "string" && typeof p?.last === "number") {
+      return { id: p.id, last: p.last };
+    }
+    return undefined;
   } catch {
     return memSession;
   }

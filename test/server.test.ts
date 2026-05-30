@@ -235,4 +235,39 @@ describe("handler hardening", () => {
     expect(dwell).toEqual([{ section: "pricing", totalMs: 500, views: 1 }]);
     expect(dwell.every((d) => typeof d.totalMs === "number")).toBe(true);
   });
+
+  it("coerces a numeric section value to a string (parity with the turso adapter)", async () => {
+    const now = Date.now();
+    await adapter.insertEvents([
+      { id: "n1", name: "$section", anonymousId: "a", sessionId: "s", path: "/", props: { section: 123, dwellMs: 10 }, ts: now, receivedAt: now },
+    ]);
+    const [row] = await createQueries({ adapter }).getSectionDwell();
+    expect(row).toEqual({ section: "123", totalMs: 10, views: 1 });
+    expect(typeof row!.section).toBe("string");
+  });
+
+  it("returns ok:0 (not 500) when events is not an array", async () => {
+    const handler = createHandler({ adapter });
+    const req = new Request("https://x.test", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ events: { length: 5 }, v: "x" }), // non-array with length
+    });
+    const res = await handler(req);
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ ok: true, stored: 0 });
+  });
+
+  it("keeps a moderately future ts (clock skew) instead of flattening it", async () => {
+    const now = Date.now();
+    const tenMinFast = now + 10 * 60_000;
+    const handler = createHandler({ adapter });
+    await handler(batchRequest([validEvent({ ts: tenMinFast })]));
+    // 10 min skew is within the 1-day future window, so the ts is preserved.
+    // A query window that includes the future ts finds it...
+    expect(await adapter.getVisitors({ from: now - 1000, to: tenMinFast + 1000 })).toBe(1);
+    // ...but a window ending before it (e.g. one that stops at the old 5-min cap)
+    // does NOT — proving the ts was kept at +10min, not flattened back to ~now.
+    expect(await adapter.getVisitors({ from: now - 1000, to: now + 5 * 60_000 })).toBe(0);
+  });
 });

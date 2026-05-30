@@ -63,19 +63,19 @@ export function sqliteAdapter(db: Database.Database): DbAdapter {
     async getVisitors({ from, to }: TimeRange) {
       const row = db
         .prepare(`SELECT COUNT(DISTINCT anonymous_id) AS n FROM tw_events WHERE ts BETWEEN ? AND ?`)
-        .get(from, to) as { n: number };
-      return row.n;
+        .get(from, to) as { n: number | bigint };
+      return Number(row.n);
     },
 
     async getSessions({ from, to }: TimeRange) {
       const row = db
         .prepare(`SELECT COUNT(DISTINCT session_id) AS n FROM tw_events WHERE ts BETWEEN ? AND ?`)
-        .get(from, to) as { n: number };
-      return row.n;
+        .get(from, to) as { n: number | bigint };
+      return Number(row.n);
     },
 
     async getSectionDwell({ from, to }: TimeRange): Promise<SectionDwell[]> {
-      return db
+      const rows = db
         .prepare(`
           SELECT json_extract(props, '$.section') AS section,
                  COALESCE(SUM(json_extract(props, '$.dwellMs')), 0) AS totalMs,
@@ -87,11 +87,20 @@ export function sqliteAdapter(db: Database.Database): DbAdapter {
           GROUP BY section
           ORDER BY totalMs DESC
         `)
-        .all(from, to) as SectionDwell[];
+        .all(from, to) as { section: unknown; totalMs: unknown; views: unknown }[];
+      // Project explicitly (mirrors the turso adapter) so both backends coerce
+      // identically — e.g. a numeric `data-tw-section` value comes back as a
+      // string from both, and aggregates are always JS numbers even if the
+      // caller's db has safeIntegers enabled.
+      return rows.map((r) => ({
+        section: String(r.section),
+        totalMs: Number(r.totalMs),
+        views: Number(r.views),
+      }));
     },
 
     async getTopCountries({ from, to }: TimeRange): Promise<CountryCount[]> {
-      return db
+      const rows = db
         .prepare(`
           SELECT country, COUNT(DISTINCT anonymous_id) AS visitors
           FROM tw_events
@@ -100,11 +109,15 @@ export function sqliteAdapter(db: Database.Database): DbAdapter {
           ORDER BY visitors DESC
           LIMIT 20
         `)
-        .all(from, to) as CountryCount[];
+        .all(from, to) as { country: unknown; visitors: unknown }[];
+      return rows.map((r) => ({
+        country: String(r.country),
+        visitors: Number(r.visitors),
+      }));
     },
 
     async pruneBefore(before: number) {
-      return db.prepare(`DELETE FROM tw_events WHERE ts < ?`).run(before).changes;
+      return Number(db.prepare(`DELETE FROM tw_events WHERE ts < ?`).run(before).changes);
     },
   };
 }

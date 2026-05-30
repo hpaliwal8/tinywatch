@@ -47,6 +47,17 @@ describe("getSessionId — persisted across page loads", () => {
     expect(ids2.getSessionId()).not.toBe(first);
   });
 
+  it("rejects a malformed stored record (non-string id) and mints a fresh valid one", async () => {
+    // A third-party script or stale schema could write a record with a recent
+    // `last` but a non-string `id`. Without shape validation this would yield a
+    // numeric sessionId that the server silently drops.
+    sessionStorage.setItem("tw_session", JSON.stringify({ id: 123, last: Date.now() }));
+    const ids = await freshIds();
+    const id = ids.getSessionId();
+    expect(typeof id).toBe("string");
+    expect(id).not.toBe("123");
+  });
+
   it("falls back to memory when sessionStorage throws (private mode)", async () => {
     vi.stubGlobal("sessionStorage", {
       getItem: () => {
