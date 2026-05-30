@@ -72,9 +72,11 @@ function installDomStubs(): Stubs {
 
 // Re-import the module fresh per test so its module-level state (cfg, pending,
 // transport) doesn't leak between cases.
+let current: typeof import("../src/client/index") | undefined;
 async function freshClient() {
   vi.resetModules();
-  return import("../src/client/index");
+  current = await import("../src/client/index");
+  return current;
 }
 
 let stubs: Stubs;
@@ -84,12 +86,12 @@ beforeEach(() => {
 });
 
 afterEach(async () => {
-  // Drain any in-flight dynamic import("./transport"/"./autocapture") *while the
-  // global stubs still exist* so a prior test's import can't resolve into the
-  // next test's fresh stubs (which would register stray listeners and make a
-  // readiness wait pass prematurely). A few macrotask ticks reliably outlast the
-  // import resolution chain; the product's `cfg !== c` guard makes any straggler
-  // a harmless no-op regardless.
+  // Tear down this test's client so its interval/listeners can't bleed into the
+  // next test, then drain in-flight dynamic imports *while the stubs still
+  // exist*. Combined, a straggling import hits cfg===undefined and the product's
+  // `cfg !== c` guard makes it a harmless no-op — deterministic, not tick-racing.
+  current?.shutdown();
+  current = undefined;
   for (let i = 0; i < 5; i++) await new Promise((r) => setTimeout(r, 0));
   vi.unstubAllGlobals();
 });

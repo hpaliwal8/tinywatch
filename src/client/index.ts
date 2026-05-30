@@ -15,6 +15,7 @@ let cfg: Required<ClientConfig> | undefined;
 let transport: Transport | undefined;
 let knownUserId: string | undefined;
 let preloadHide: (() => void) | undefined;
+let teardownAutocapture: (() => void) | undefined;
 
 // Events fired before the transport chunk finishes loading land here, then drain
 // once it's ready. Keeping the batching machinery out of the synchronous bundle
@@ -55,7 +56,7 @@ export function init(config: ClientConfig): void {
   if (c.autocapture) {
     void import("./autocapture").then(({ startAutocapture }) => {
       if (cfg !== c) return;
-      startAutocapture(c, track);
+      teardownAutocapture = startAutocapture(c, track);
     });
   }
 }
@@ -80,13 +81,17 @@ export function identify(userId: string): void {
 }
 
 /**
- * Flush and tear down: clears the transport interval, removes listeners, and
- * resets state so init() can run again. For SPA re-init, hot-reload, and tests.
+ * Flush and tear down: clears the transport interval, removes all listeners
+ * (transport, autocapture, sections) and restores the patched history methods,
+ * then resets state so init() can run again. For SPA re-init, hot-reload, tests.
+ *
+ * Note: this also clears the identified user — re-identify after a re-init.
  */
 export function shutdown(): void {
   if (preloadHide) removeEventListener("visibilitychange", preloadHide);
   transport?.shutdown();
-  preloadHide = transport = cfg = knownUserId = undefined;
+  teardownAutocapture?.(); // removes click/scroll/popstate/section listeners, restores history
+  preloadHide = transport = teardownAutocapture = knownUserId = cfg = undefined;
   pending = [];
 }
 

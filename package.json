@@ -168,10 +168,10 @@
       "gzip": true
     },
     {
-      "name": "client full (core + transport + autocapture + sections)",
+      "name": "client full (core + transport + autocapture + sections, all lazy-loaded)",
       "path": "dist/index.js",
       "import": "*",
-      "limit": "2.1 kB",
+      "limit": "2.25 kB",
       "gzip": true
     }
   ],

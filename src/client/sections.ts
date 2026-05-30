@@ -1,9 +1,10 @@
 import type { ClientConfig } from "../types";
+import type { Teardown } from "./autocapture";
 
 type Track = (name: string, props?: Record<string, unknown>) => void;
 
-export function startSectionObserver(cfg: Required<ClientConfig>, track: Track): void {
-  if (typeof IntersectionObserver === "undefined") return;
+export function startSectionObserver(cfg: Required<ClientConfig>, track: Track): Teardown {
+  if (typeof IntersectionObserver === "undefined") return () => {};
 
   // Per-element dwell state. `accrued` holds time banked before the current run;
   // `runStart` is when the current run began, or null while the tab is hidden.
@@ -38,17 +39,27 @@ export function startSectionObserver(cfg: Required<ClientConfig>, track: Track):
 
   // Pause the dwell clock while the tab is hidden, resume on return — so a
   // backgrounded tab doesn't inflate dwell with time the section wasn't viewed.
-  addEventListener("visibilitychange", () => {
-    const hidden = document.visibilityState === "hidden";
-    for (const [, s] of state) {
-      if (hidden && s.runStart != null) {
-        s.accrued += performance.now() - s.runStart;
-        s.runStart = null;
-      } else if (!hidden && s.runStart == null) {
-        s.runStart = performance.now();
+  const ac = new AbortController();
+  addEventListener(
+    "visibilitychange",
+    () => {
+      const hidden = document.visibilityState === "hidden";
+      for (const [, s] of state) {
+        if (hidden && s.runStart != null) {
+          s.accrued += performance.now() - s.runStart;
+          s.runStart = null;
+        } else if (!hidden && s.runStart == null) {
+          s.runStart = performance.now();
+        }
       }
-    }
-  });
+    },
+    { signal: ac.signal },
+  );
 
   for (const el of document.querySelectorAll(`[${cfg.sectionAttribute}]`)) io.observe(el);
+
+  return () => {
+    io.disconnect();
+    ac.abort();
+  };
 }
