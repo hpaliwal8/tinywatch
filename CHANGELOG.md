@@ -48,7 +48,7 @@ across backends:
 
 ### Plugins
 
-- Subpath-exported plugin system (`tinywatch/plugins/*`) registered via `use()`,
+- Subpath-exported plugin system (`@hitansh8/tinywatch/plugins/*`) registered via `use()`,
   with teardown support and an `onFlushError` / `reenqueue` hook.
 - `outbound` — track clicks to external sites.
 - `retry` — re-deliver failed flushes with exponential backoff and a per-event

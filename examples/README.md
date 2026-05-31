@@ -16,7 +16,7 @@ the framework glue and which adapter/runtime they pair with.
 ## The two-line client (any of the above)
 
 ```ts
-import { init } from "tinywatch";
+import { init } from "@hitansh8/tinywatch";
 init({ endpoint: "/api/tw" });
 ```
 
@@ -24,12 +24,12 @@ Then `data-tw-track="signup"` / `data-tw-section="pricing"` attributes do the re
 
 ## Plugins
 
-First-party plugins live at `tinywatch/plugins/*` and register via `use()`:
+First-party plugins live at `@hitansh8/tinywatch/plugins/*` and register via `use()`:
 
 ```ts
-import { init, use } from "tinywatch";
-import { outbound } from "tinywatch/plugins/outbound";
-import { retry } from "tinywatch/plugins/retry";
+import { init, use } from "@hitansh8/tinywatch";
+import { outbound } from "@hitansh8/tinywatch/plugins/outbound";
+import { retry } from "@hitansh8/tinywatch/plugins/retry";
 
 init({ endpoint: "/api/tw" });
 use(outbound());          // tracks clicks to external sites as "$outbound"

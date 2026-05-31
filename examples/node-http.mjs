@@ -5,7 +5,7 @@
 
 import { createServer } from "node:http";
 import Database from "better-sqlite3";
-import { createHandler, sqliteAdapter } from "tinywatch/server";
+import { createHandler, sqliteAdapter } from "@hitansh8/tinywatch/server";
 
 const adapter = sqliteAdapter(new Database("analytics.db"));
 await adapter.migrate(); // ensure tables exist on boot

@@ -1,5 +1,5 @@
 {
-  "name": "tinywatch",
+  "name": "@hitansh8/tinywatch",
   "version": "1.0.0",
   "description": "Tiny, embeddable web analytics: a ~900B client SDK plus a server handler that writes to your own database. A dependency, not a deployment.",
   "type": "module",

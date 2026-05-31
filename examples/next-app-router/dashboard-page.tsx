@@ -5,7 +5,7 @@
 // straight from your DB via createQueries in a React Server Component.
 
 import Database from "better-sqlite3";
-import { createQueries, sqliteAdapter } from "tinywatch/server";
+import { createQueries, sqliteAdapter } from "@hitansh8/tinywatch/server";
 
 const stats = createQueries({ adapter: sqliteAdapter(new Database("analytics.db")) });
 

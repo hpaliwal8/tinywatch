@@ -5,7 +5,7 @@
 // exactly what an App Router route handler is — so you export it directly.
 
 import Database from "better-sqlite3";
-import { createHandler, sqliteAdapter } from "tinywatch/server";
+import { createHandler, sqliteAdapter } from "@hitansh8/tinywatch/server";
 
 // Reuse one adapter across requests. In a serverless deployment each instance
 // gets its own SQLite file/connection; for multi-instance use a shared DB

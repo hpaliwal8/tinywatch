@@ -10,7 +10,7 @@
 //   database_name = "analytics"
 //   database_id = "<your-d1-id>"
 
-import { createHandler, d1Adapter } from "tinywatch/server";
+import { createHandler, d1Adapter } from "@hitansh8/tinywatch/server";
 
 interface Env {
   DB: D1Database; // from @cloudflare/workers-types

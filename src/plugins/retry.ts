@@ -15,8 +15,8 @@ export interface RetryOptions {
  * events keep their original ids, so a retried-then-delivered event dedups
  * server-side rather than double-counting.
  *
- *   import { init, use } from "tinywatch";
- *   import { retry } from "tinywatch/plugins/retry";
+ *   import { init, use } from "@hitansh8/tinywatch";
+ *   import { retry } from "@hitansh8/tinywatch/plugins/retry";
  *   init({ endpoint: "/api/tw" });
  *   use(retry({ maxRetries: 5 }));
  */

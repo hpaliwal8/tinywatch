@@ -6,7 +6,7 @@ writes to **your own** database. A dependency, not a deployment.
 ## Install
 
 ```bash
-npm install tinywatch
+npm install @hitansh8/tinywatch
 # plus the driver for your database, e.g.
 npm install better-sqlite3
 ```
@@ -14,7 +14,7 @@ npm install better-sqlite3
 ## Client (2 lines)
 
 ```ts
-import { init } from "tinywatch";
+import { init } from "@hitansh8/tinywatch";
 
 init({ endpoint: "/api/tw" });
 ```
@@ -26,7 +26,7 @@ Add `data-tw-track="signup_click"` to any element for click tracking, or
 
 ```ts
 import Database from "better-sqlite3";
-import { createHandler, sqliteAdapter } from "tinywatch/server";
+import { createHandler, sqliteAdapter } from "@hitansh8/tinywatch/server";
 
 const adapter = sqliteAdapter(new Database("analytics.db"));
 export const POST = createHandler({ adapter }); // mount at /api/tw
@@ -35,13 +35,13 @@ export const POST = createHandler({ adapter }); // mount at /api/tw
 ## Migrate
 
 ```bash
-npx tinywatch migrate
+npx @hitansh8/tinywatch migrate
 ```
 
 ## Query
 
 ```ts
-import { createQueries, sqliteAdapter } from "tinywatch/server";
+import { createQueries, sqliteAdapter } from "@hitansh8/tinywatch/server";
 
 const stats = createQueries({ adapter });
 await stats.getVisitors();     // last 7 days
@@ -57,16 +57,16 @@ Opt-in behavior via `use()`. Each plugin is its own ~250–300 B chunk loaded on
 when you import it — you pay for nothing you don't use.
 
 ```ts
-import { init, use } from "tinywatch";
-import { outbound } from "tinywatch/plugins/outbound";
-import { retry } from "tinywatch/plugins/retry";
+import { init, use } from "@hitansh8/tinywatch";
+import { outbound } from "@hitansh8/tinywatch/plugins/outbound";
+import { retry } from "@hitansh8/tinywatch/plugins/retry";
 
 init({ endpoint: "/api/tw" });
 use(outbound());               // track clicks to external sites as "$outbound"
 use(retry({ maxRetries: 5 })); // re-deliver failed flushes with exponential backoff
 ```
 
-Write your own with the `Plugin` / `PluginContext` types from `tinywatch`.
+Write your own with the `Plugin` / `PluginContext` types from `@hitansh8/tinywatch`.
 See [examples/](examples/) for framework mounts (Next.js, Cloudflare Workers,
 Hono, raw Node) and more.
 

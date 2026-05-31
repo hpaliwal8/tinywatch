@@ -4,7 +4,7 @@
 
 import { createClient } from "@libsql/client";
 import { Hono } from "hono";
-import { createHandler, tursoAdapter } from "tinywatch/server";
+import { createHandler, tursoAdapter } from "@hitansh8/tinywatch/server";
 
 const client = createClient({
   url: process.env.TURSO_URL!,

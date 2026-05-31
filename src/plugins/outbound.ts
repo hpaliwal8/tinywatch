@@ -15,8 +15,8 @@ export interface OutboundOptions {
  * Uses only the Plugin contract's `track` — no special hooks — so it works with
  * the stock client:
  *
- *   import { init, use } from "tinywatch";
- *   import { outbound } from "tinywatch/plugins/outbound";
+ *   import { init, use } from "@hitansh8/tinywatch";
+ *   import { outbound } from "@hitansh8/tinywatch/plugins/outbound";
  *   init({ endpoint: "/api/tw" });
  *   use(outbound());
  */
