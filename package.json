@@ -142,6 +142,7 @@
     "dev": "tsup --watch",
     "clean": "rm -rf dist",
     "typecheck": "tsc --noEmit",
+    "check:name": "sh scripts/check-package-name.sh",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:pg": "vitest run test/postgres.real.test.ts",

@@ -27,6 +27,7 @@ jobs:
 
       # Gate before publishing — never ship a build that doesn't pass.
       - run: npm run typecheck
+      - run: npm run check:name
       - run: npm test
       - run: npm run build
       - run: npm run size

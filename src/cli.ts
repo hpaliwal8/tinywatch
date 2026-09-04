@@ -36,7 +36,7 @@ async function main(): Promise<void> {
       break;
     }
     default:
-      console.log("Usage: tinywatch migrate");
+      console.log("Usage: npx @hitansh8/tinywatch migrate");
       process.exit(cmd ? 1 : 0);
   }
 }

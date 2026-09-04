@@ -1,5 +1,5 @@
 // Runtime-free type contracts shared by client + server.
-// Consumers import these via `tinywatch/types`. Prefer `import type`.
+// Consumers import these via `@hitansh8/tinywatch/types`. Prefer `import type`.
 
 /** A single event as it travels over the wire (client → server). */
 export interface TinywatchEvent {
@@ -103,7 +103,7 @@ export interface CountryCount {
 
 /** Pluggable database adapter contract — implement one per backend. */
 export interface DbAdapter {
-  /** Create tables/indexes if absent. Called by `npx tinywatch migrate`. */
+  /** Create tables/indexes if absent. Called by `npx @hitansh8/tinywatch migrate`. */
   migrate(): Promise<void>;
   /** Persist a batch of events. */
   insertEvents(events: StoredEvent[]): Promise<void>;

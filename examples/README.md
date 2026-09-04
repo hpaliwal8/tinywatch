@@ -11,7 +11,7 @@ the framework glue and which adapter/runtime they pair with.
 | [`hono.ts`](./hono.ts) | Node / Bun / Deno / Workers | Turso | One portable file that runs anywhere Web `Request`/`Response` does |
 | [`node-http.mjs`](./node-http.mjs) | `node:http` | SQLite | No framework — the manual `IncomingMessage` ⇄ `Request`/`Response` bridge |
 
-`tinywatch.config.mjs` is what `npx tinywatch migrate` reads to create your tables.
+`tinywatch.config.mjs` is what `npx @hitansh8/tinywatch migrate` reads to create your tables.
 
 ## The two-line client (any of the above)
 
@@ -43,7 +43,7 @@ use(retry({ maxRetries: 5 })); // re-deliver failed flushes with exponential bac
   keep their original ids, so they dedup server-side instead of double-counting.
 
 Each plugin is its own ~250–300 B chunk — you only pay for what you `use()`.
-Build your own with the `Plugin` / `PluginContext` types from `tinywatch`.
+Build your own with the `Plugin` / `PluginContext` types from `@hitansh8/tinywatch`.
 
 ## Notes
 
@@ -53,5 +53,5 @@ Build your own with the `Plugin` / `PluginContext` types from `tinywatch`.
   (`sqliteAdapter` / `tursoAdapter` / `d1Adapter` / `postgresAdapter`) — swap the
   one line that constructs it. SQLite is per-instance; use Postgres/Turso/D1 for
   multi-instance or serverless deployments.
-- **Migrate first:** run `npx tinywatch migrate` (or call `adapter.migrate()`) once
+- **Migrate first:** run `npx @hitansh8/tinywatch migrate` (or call `adapter.migrate()`) once
   before sending events.
