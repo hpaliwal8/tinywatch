@@ -22,5 +22,5 @@ const handler = createHandler({
 export const POST = handler;
 export const OPTIONS = handler;
 
-// Run `npx tinywatch migrate` once (with a tinywatch.config.mjs exporting
+// Run `npx @hitansh8/tinywatch migrate` once (with a tinywatch.config.mjs exporting
 // { adapter }) to create the tables before first use.

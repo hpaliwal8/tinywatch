@@ -22,6 +22,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run typecheck
+      - run: npm run check:name
       - run: npm test
       # build must precede size + attw (both read dist/ and the packed tarball).
       - run: npm run build

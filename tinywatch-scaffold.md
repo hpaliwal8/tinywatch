@@ -38,7 +38,7 @@ tinywatch/
 │  │     ├─ turso.ts             ← stub
 │  │     ├─ d1.ts                ← stub
 │  │     └─ postgres.ts          ← stub
-│  └─ cli.ts                     ← `npx tinywatch migrate`
+│  └─ cli.ts                     ← `npx @hitansh8/tinywatch migrate`
 ├─ examples/
 │  └─ tinywatch.config.mjs       ← what your *users* write
 └─ test/
@@ -211,7 +211,7 @@ export interface CountryCount {
 
 /** Pluggable database adapter contract — implement one per backend. */
 export interface DbAdapter {
-  /** Create tables/indexes if absent. Called by `npx tinywatch migrate`. */
+  /** Create tables/indexes if absent. Called by `npx @hitansh8/tinywatch migrate`. */
   migrate(): Promise<void>;
   /** Persist a batch of events. */
   insertEvents(events: StoredEvent[]): Promise<void>;
@@ -893,7 +893,7 @@ async function main(): Promise<void> {
       break;
     }
     default:
-      console.log("Usage: tinywatch migrate");
+      console.log("Usage: npx @hitansh8/tinywatch migrate");
       process.exit(cmd ? 1 : 0);
   }
 }
@@ -904,7 +904,7 @@ main().catch((err: unknown) => {
 });
 ```
 
-> The shebang on line 1 is required — tsup preserves it so `npx tinywatch migrate` is directly executable. A TS config file would need a loader; `.mjs`/`.js` works out of the box.
+> The shebang on line 1 is required — tsup preserves it so `npx @hitansh8/tinywatch migrate` is directly executable. A TS config file would need a loader; `.mjs`/`.js` works out of the box.
 
 ---
 
@@ -912,7 +912,7 @@ main().catch((err: unknown) => {
 
 ```js
 import Database from "better-sqlite3";
-import { sqliteAdapter } from "tinywatch/server";
+import { sqliteAdapter } from "@hitansh8/tinywatch/server";
 
 export default {
   adapter: sqliteAdapter(new Database("analytics.db")),
@@ -959,7 +959,7 @@ writes to **your own** database. A dependency, not a deployment.
 ## Install
 
 ```bash
-npm install tinywatch
+npm install @hitansh8/tinywatch
 # plus the driver for your database, e.g.
 npm install better-sqlite3
 ```
@@ -967,7 +967,7 @@ npm install better-sqlite3
 ## Client (2 lines)
 
 ```ts
-import { init } from "tinywatch";
+import { init } from "@hitansh8/tinywatch";
 
 init({ endpoint: "/api/tw" });
 ```
@@ -979,7 +979,7 @@ Add `data-tw-track="signup_click"` to any element for click tracking, or
 
 ```ts
 import Database from "better-sqlite3";
-import { createHandler, sqliteAdapter } from "tinywatch/server";
+import { createHandler, sqliteAdapter } from "@hitansh8/tinywatch/server";
 
 const adapter = sqliteAdapter(new Database("analytics.db"));
 export const POST = createHandler({ adapter }); // mount at /api/tw
@@ -988,13 +988,13 @@ export const POST = createHandler({ adapter }); // mount at /api/tw
 ## Migrate
 
 ```bash
-npx tinywatch migrate
+npx @hitansh8/tinywatch migrate
 ```
 
 ## Query
 
 ```ts
-import { createQueries, sqliteAdapter } from "tinywatch/server";
+import { createQueries, sqliteAdapter } from "@hitansh8/tinywatch/server";
 
 const stats = createQueries({ adapter });
 await stats.getVisitors();     // last 7 days
